@@ -26,4 +26,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - uses: mfinelli/setup-shfmt@v1
-      - run: shfmt -d dnsupdate.sh
+      # -d = diff
+      # -i 2 = 2 space indent
+      # -bn =  binary ops like && and | may start a line
+      - run: shfmt -d -i 2 -bn dnsupdate.sh
