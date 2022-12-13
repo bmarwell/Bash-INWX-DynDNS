@@ -31,13 +31,13 @@ function get_v4_ip() {
 
   if [ ! -e v4.pool ]; then
     log "No IPv4 pool (v4.pool file) found. Using https://ip4.ident.me/"
-    curl -s "https://v4.ident.me"
+    curl -s --fail --show-error "https://v4.ident.me"
     return 0
   fi
 
   V4_POOL=$(cat v4.pool)
   for V4_API in $V4_POOL; do
-    MAYBE_V4_ADDR=$(curl -s "$V4_API")
+    MAYBE_V4_ADDR=$(curl -s --fail --show-error "$V4_API")
     if [[ $MAYBE_V4_ADDR =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
       echo "$MAYBE_V4_ADDR"
       return 0
@@ -57,13 +57,13 @@ function get_v6_ip() {
 
   if ! [ -e v6.pool ]; then
     log "No IPv6 pool (v6.pool file) found. Using https://ip6.ident.me/"
-    curl -s "https://v6.ident.me/"
+    curl -s --fail --show-error "https://v6.ident.me/"
     return 0
   fi
 
   V6_POOL=$(cat v6.pool)
   for V6_API in $V6_POOL; do
-    MAYBE_V6_ADDR=$(curl -s "$V6_API")
+    MAYBE_V6_ADDR=$(curl -s --fail --show-error "$V6_API")
     if [[ $MAYBE_V6_ADDR == *":"* ]]; then
       echo "$MAYBE_V6_ADDR"
       return 0
@@ -72,6 +72,9 @@ function get_v6_ip() {
 
   return 1
 }
+
+touch update.log && tail -n 1200 update.log > update.log.tmp && cp update.log.tmp update.log && rm update.log.tmp
+
 ################################################################################
 # Do the update if needed ######################################################
 for DNSID in "${DNSIDS[@]}"; do
@@ -120,10 +123,11 @@ for DNSID in "${DNSIDS[@]}"; do
 
       if ! grep -q "Command completed successfully" <<<"$RET"; then
         log "Something went wrong updating the IPv4 address. Check the configuration and make sure you're not using Two-Factor-Authentication."
+        log "Return of curl: [$RET]."
         exit 1
       fi
-      echo "$NEWIPv4" >old.ipv4
       log "Updated IPv4: $OLDIPv4 --> $NEWIPv4"
+      log "Return of curl: [$RET]."
     else
       log "IPv4: No changes"
     fi
@@ -146,10 +150,11 @@ for DNSID in "${DNSIDS[@]}"; do
 
       if ! grep -q "Command completed successfully" <<<"$RET"; then
         log "Something went wrong updating the IPv6 address. Check the configuration and make sure you're not using Two-Factor-Authentication."
+        log "Return of curl: [$RET]."
         exit 1
       fi
-      echo "$NEWIPv6" >old.ipv6
       log "Updated IPv6: $OLDIPv6 --> $NEWIPv6"
+      log "Return of curl: [$RET]."
     else
       log "IPv6: No changes"
     fi
@@ -160,5 +165,8 @@ for DNSID in "${DNSIDS[@]}"; do
   log "Entry $DNSID finished"
   log "###################################################"
 done
+
+echo "$NEWIPv4" >old.ipv4
+echo "$NEWIPv6" >old.ipv6
 
 ################################################################################
